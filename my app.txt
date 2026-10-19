@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Fashion Discovery & Delivery</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f7f7f7; padding: 20px; }
+        header { text-align: center; padding: 20px 0; margin-bottom: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        header h1 { color: #bd081c; font-size: 24px; } /* Pinterest red color theme */
+
+        /* Pinterest-style Masonry Layout columns */
+        .masonry-container {
+            column-count: 4;
+            column-gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        @media (max-width: 900px) { .masonry-container { column-count: 3; } }
+        @media (max-width: 600px) { .masonry-container { column-count: 2; } }
+
+        /* Individual Card styling */
+        .outfit-card {
+            background: white;
+            margin-bottom: 16px;
+            break-inside: avoid;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .outfit-card:hover { transform: translateY(-4px); }
+        .outfit-card img { width: 100%; display: block; height: auto; }
+        .outfit-info { padding: 12px; }
+        .outfit-title { font-size: 14px; font-weight: 600; color: #333; }
+        .outfit-distance { font-size: 12px; color: #767676; margin-top: 4px; }
+
+        /* Shoppable Details Modal Popup */
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content {
+            background: white; padding: 24px; border-radius: 24px; max-width: 500px; width: 90%;
+            text-align: center; position: relative; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: #666; }
+        .modal img { width: 100%; max-height: 300px; object-fit: cover; border-radius: 12px; margin-bottom: 15px; }
+        .delivery-badge { background: #e1f5fe; color: #0288d1; padding: 8px 12px; border-radius: 20px; display: inline-block; font-size: 13px; font-weight: bold; margin: 10px 0; }
+        .action-btn { background: #bd081c; color: white; padding: 12px 24px; border: none; border-radius: 25px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        
+        /* Loading animation element */
+        .loader { text-align: center; padding: 20px; font-size: 14px; color: #888; width: 100%; grid-column: 1/-1; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>👗 Local Fashion Feed</h1>
+        <p>Scroll endlessly for outfit ideas near you</p>
+    </header>
+
+    <div class="masonry-container" id="feed">
+        <!-- Javascript will dynamically inject initial outfit pins here -->
+    </div>
+
+    <div class="loader" id="loader">Loading fresh styles...</div>
+
+    <!-- Product Interaction Modal Layout -->
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Outfit Name</h2>
+            <div id="modalDistance" style="color: #666; margin: 5px 0 15px 0;">0.5 km away</div>
+            <img id="modalImg" src="" alt="Selected Outfit">
+            <div>
+                <span class="delivery-badge" id="modalDelivery">⚡ Instant Delivery Available</span>
+            </div>
+            <p style="font-size: 14px; color: #555;">Available at your nearest community store partner.</p>
+            <button class="action-btn">Order for Delivery Now</button>
+        </div>
+    </div>
+
+    <script>
+        // Sample visual mock database generator 
+        const sampleOutfits = [
+            { title: "Casual Winter Sage Blazer Set", dist: "1.2 km away", img: "https://picsum.photos", deliv: "Deliver in 45 mins" },
+            { title: "Streetwear Cargo & Oversized Tee", dist: "0.4 km away", img: "https://picsum.photos", deliv: "Instant flash rider delivery" },
+            { title: "Classic Pastel Linen Summer Dress", dist: "3.1 km away", img: "https://picsum.photos", deliv: "Deliver by evening" },
+            { title: "Minimalist Monochrome Activewear", dist: "0.8 km away", img: "https://picsum.photos", deliv: "Deliver in 30 mins" },
+            { title: "Vintage Corduroy Patchwork Jacket", dist: "2.5 km away", img: "https://picsum.photos", deliv: "Next-day morning delivery" }
+        ];
+
+        const feed = document.getElementById('feed');
+        const modal = document.getElementById('productModal');
+
+        // Function to render items inside the grid dynamic blocks
+        function createOutfitCard(item) {
+            const card = document.createElement('div');
+            card.className = 'outfit-card';
+            card.onclick = () => openModal(item);
+            
+            card.innerHTML = `
+                <img src="${item.img}" alt="${item.title}">
+                <div class="outfit-info">
+                    <div class="outfit-title">${item.title}</div>
+                    <div class="outfit-distance">📍 ${item.dist}</div>
+                </div>
+            `;
+            return card;
+        }
+
+        // Loop array to load elements initially
+        function generateInitialFeed() {
+            for(let i=0; i<12; i++) {
+                let randomOutfit = sampleOutfits[Math.floor(Math.random() * sampleOutfits.length)];
+                // Clone visual parameter variants for realistic demo feel
+                let uniqueOutfit = {...randomOutfit, img: `https://picsum.photos{400 + (i*35)}?random=${i}`};
+                feed.appendChild(createOutfitCard(uniqueOutfit));
+            }
+        }
+
+        // Modal Action Windows logic 
+        function openModal(item) {
+            document.getElementById('modalTitle').innerText = item.title;
+            document.getElementById('modalDistance').innerText = `📍 Store Location: ${item.dist}`;
+            document.getElementById('modalDelivery').innerText = `🛵 Fulfillment: ${item.deliv}`;
+            document.getElementById('modalImg').src = item.img;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Simple Window Infinite Scrolling Observer Hook
+        window.onscroll = function() {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 100) {
+                // Mimic background data stream fetching delay
+                for(let i=0; i<4; i++) {
+                    let randomOutfit = sampleOutfits[Math.floor(Math.random() * sampleOutfits.length)];
+                    let uniqueOutfit = {...randomOutfit, img: `https://picsum.photos{300 + Math.floor(Math.random()*400)}?random=${Date.now() + i}`};
+                    feed.appendChild(createOutfitCard(uniqueOutfit));
+                }
+            }
+        };
+
+        // Initialize App View State
+        generateInitialFeed();
+    </script>
+</body>
+</html>
